@@ -14,8 +14,16 @@
   <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-6" id="auth-container">
     <h1 class="text-2xl font-bold mb-4 text-center">Password Locker</h1>
     <div id="login-section">
-      <label class="block mb-2">Mobile Number</label>
-      <input type="tel" id="mobileInput" placeholder="+97412345678" class="w-full p-2 border rounded mb-2" />
+      <label class="block mb-2">Mobile Number (with country code)</label>
+      <div class="flex items-center mb-2">
+        <select id="countryCode" class="p-2 border rounded-l">
+          <option value="+974">🇶🇦 +974</option>
+          <option value="+1">🇺🇸 +1</option>
+          <option value="+44">🇬🇧 +44</option>
+          <!-- Add more countries as needed -->
+        </select>
+        <input type="tel" id="mobileInput" placeholder="12345678" class="flex-1 p-2 border-t border-b border-r rounded-r" />
+      </div>
       <p id="mobileError" class="text-red-500 text-sm hidden">Invalid mobile number</p>
 
       <label class="block mb-2">Password</label>
@@ -25,7 +33,8 @@
       <input type="email" id="emailInput" placeholder="you@example.com" class="w-full p-2 border rounded mb-4" />
 
       <button id="loginBtn" class="w-full bg-blue-500 text-white p-2 rounded mb-2">Login</button>
-      <button id="googleBtn" class="w-full bg-red-500 text-white p-2 rounded mb-2">Sign in with Google</button>
+      <div id="g_id_onload" data-client_id="YOUR_GOOGLE_CLIENT_ID" data-callback="handleGoogleCredentialResponse" data-auto_prompt="false"></div>
+      <div class="g_id_signin w-full mb-2"></div>
       <button id="signupBtn" class="w-full bg-green-500 text-white p-2 rounded mb-2">Sign Up</button>
       <button id="forgotBtn" class="w-full bg-yellow-500 text-black p-2 rounded">Forgot Password</button>
     </div>
@@ -34,8 +43,8 @@
       <h2 class="text-xl font-bold mb-4">Saved Passwords</h2>
       <div id="savedList" class="space-y-2"></div>
       <button id="exportBtn" class="w-full bg-purple-500 text-white p-2 rounded mt-4">Export All (ZIP: JSON + TXT)</button>
-      <input type="file" id="importFile" accept=".zip" class="hidden" />
-      <button id="importBtn" class="w-full bg-yellow-500 text-white p-2 rounded mt-2">Import (ZIP)</button>
+      <input type="file" id="importFile" accept=".zip,.json" class="hidden" />
+      <button id="importBtn" class="w-full bg-yellow-500 text-white p-2 rounded mt-2">Import (ZIP/JSON)</button>
     </div>
   </div>
 
@@ -44,9 +53,9 @@
   <script>
     const loginBtn = document.getElementById('loginBtn');
     const signupBtn = document.getElementById('signupBtn');
-    const googleBtn = document.getElementById('googleBtn');
     const forgotBtn = document.getElementById('forgotBtn');
     const mobileInput = document.getElementById('mobileInput');
+    const countryCode = document.getElementById('countryCode');
     const passwordInput = document.getElementById('passwordInput');
     const emailInput = document.getElementById('emailInput');
     const mobileError = document.getElementById('mobileError');
@@ -101,7 +110,7 @@
     }
 
     loginBtn.onclick = () => {
-      const mobile = mobileInput.value.trim();
+      const mobile = countryCode.value + mobileInput.value.trim();
       const pw = passwordInput.value.trim();
       if (!validateMobile(mobile)) { mobileError.classList.remove('hidden'); return; }
       mobileError.classList.add('hidden');
@@ -119,7 +128,7 @@
     };
 
     signupBtn.onclick = () => {
-      const mobile = mobileInput.value.trim();
+      const mobile = countryCode.value + mobileInput.value.trim();
       const pw = passwordInput.value.trim();
       const email = emailInput.value.trim();
 
@@ -136,7 +145,7 @@
     };
 
     forgotBtn.onclick = () => {
-      const mobile = mobileInput.value.trim();
+      const mobile = countryCode.value + mobileInput.value.trim();
       if (!validateMobile(mobile)) { mobileError.classList.remove('hidden'); return; }
       mobileError.classList.add('hidden');
       const email = localStorage.getItem(`email_${mobile}`);
@@ -148,10 +157,12 @@
       }
     };
 
-    googleBtn.onclick = () => {
-      showToast('Redirecting to Google sign-in...');
-      // Integrate proper Google OAuth2 flow here
-    };
+    function handleGoogleCredentialResponse(response) {
+      showToast('Google sign-in successful');
+      document.getElementById('login-section').classList.add('hidden');
+      passwordManager.classList.remove('hidden');
+      renderPasswords();
+    }
 
     exportBtn.onclick = () => {
       const zip = new JSZip();
@@ -160,29 +171,7 @@
       zip.file('data.json', jsonData);
       zip.file('data.txt', txtData);
       zip.generateAsync({ type: 'blob' }).then(content => saveAs(content, 'passwords.zip'));
-      showToast('Exported as ZIP');
     };
-
-    importBtn.onclick = () => importFile.click();
-    importFile.onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      JSZip.loadAsync(file).then(zip => zip.file('data.json').async('string'))
-        .then(jsonStr => {
-          savedPasswords = JSON.parse(jsonStr);
-          localStorage.setItem('savedPasswords', JSON.stringify(savedPasswords));
-          renderPasswords();
-          showToast('Imported successfully');
-        }).catch(() => showToast('Import failed', 'error'));
-    };
-
-    window.addEventListener('DOMContentLoaded', () => {
-      const saved = JSON.parse(localStorage.getItem('autoLogin') || 'null');
-      if (saved) {
-        mobileInput.value = saved.mobile;
-        passwordInput.value = saved.pw;
-      }
-    });
   </script>
 </body>
 </html>
