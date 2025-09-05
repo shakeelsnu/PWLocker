@@ -112,6 +112,7 @@
         passwordManager.classList.remove('hidden');
         renderPasswords();
         showToast('Login successful');
+        localStorage.setItem('autoLogin', JSON.stringify({ mobile, pw }));
       } else {
         showToast('Wrong password', 'error');
       }
@@ -131,6 +132,7 @@
       localStorage.setItem(`pw_${mobile}`, pw);
       localStorage.setItem(`email_${mobile}`, email);
       showToast('Signed up successfully');
+      localStorage.setItem('autoLogin', JSON.stringify({ mobile, pw }));
     };
 
     forgotBtn.onclick = () => {
@@ -140,7 +142,7 @@
       const email = localStorage.getItem(`email_${mobile}`);
       const pw = localStorage.getItem(`pw_${mobile}`);
       if (email && pw) {
-        alert(`Password sent to ${email}: ${pw}`); // Replace with actual email sending in production
+        alert(`Password sent to ${email}: ${pw}`); // placeholder for email sending
       } else {
         showToast('No password found for this mobile', 'error');
       }
@@ -148,7 +150,7 @@
 
     googleBtn.onclick = () => {
       showToast('Redirecting to Google sign-in...');
-      // Here integrate proper Google OAuth2 flow using gsi client or Firebase OAuth
+      // Integrate proper Google OAuth2 flow here
     };
 
     exportBtn.onclick = () => {
@@ -178,4 +180,9 @@
       const saved = JSON.parse(localStorage.getItem('autoLogin') || 'null');
       if (saved) {
         mobileInput.value = saved.mobile;
-       
+        passwordInput.value = saved.pw;
+      }
+    });
+  </script>
+</body>
+</html>
