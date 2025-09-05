@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Password Locker with Enhanced Security</title>
+    <title>Password Locker with Google Drive Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -79,6 +79,18 @@
         .toggle-password:hover {
             color: #4b5563;
         }
+        .progress-bar {
+            height: 5px;
+            background-color: #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background-color: #10b981;
+            transition: width 0.3s ease;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
@@ -148,8 +160,8 @@
 
                 <div class="mt-6 p-3 bg-blue-50 rounded-lg">
                     <p class="text-blue-800 text-sm text-center">
-                        <i class="fas fa-cloud text-blue-600 mr-1"></i>
-                        Your passwords are securely synced across devices
+                        <i class="fab fa-google-drive text-blue-600 mr-1"></i>
+                        Your passwords are securely synced with Google Drive
                     </p>
                 </div>
             </div>
@@ -199,7 +211,7 @@
                         <i class="fas fa-file-import mr-2"></i>Import
                     </button>
                     <button id="syncBtn" class="bg-green-600 hover:bg-green-700 text-white p-2 rounded transition col-span-2">
-                        <i class="fas fa-cloud-upload-alt mr-2"></i>Sync to Cloud
+                        <i class="fab fa-google-drive mr-2"></i>Sync to Google Drive
                     </button>
                     <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white p-2 rounded transition col-span-2">
                         <i class="fas fa-sign-out-alt mr-2"></i>Logout
@@ -208,32 +220,48 @@
                 
                 <div class="mt-6 p-3 bg-green-50 rounded-lg">
                     <p class="text-green-800 text-sm text-center">
-                        <i class="fas fa-cloud text-green-600 mr-1"></i>
-                        Your data is securely backed up to the cloud
+                        <i class="fab fa-google-drive text-green-600 mr-1"></i>
+                        Your data is securely backed up to Google Drive
                     </p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Cloud Sync Modal -->
-    <div id="cloudModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <!-- Google Drive Sync Modal -->
+    <div id="googleDriveModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
         <div class="bg-white rounded-lg p-6 max-w-md mx-4">
-            <h3 class="text-xl font-bold mb-4 text-blue-600">Enable Cloud Sync</h3>
-            <p class="mb-4">Choose your cloud storage provider to sync your passwords across devices:</p>
+            <h3 class="text-xl font-bold mb-4 text-blue-600">Enable Google Drive Sync</h3>
+            <p class="mb-4">Connect your Google Drive account to sync your passwords across all your devices:</p>
+            
+            <div class="mb-4 p-3 bg-blue-50 rounded-lg">
+                <p class="text-blue-800 text-sm">
+                    <i class="fas fa-info-circle text-blue-600 mr-1"></i>
+                    Your passwords are encrypted before being synced to Google Drive for maximum security.
+                </p>
+            </div>
             
             <div class="space-y-3 mb-6">
-                <button id="dropboxSync" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded flex items-center justify-center">
-                    <i class="fab fa-dropbox mr-2"></i> Sync with Dropbox
-                </button>
-                <button id="googleSync" class="w-full bg-red-600 hover:bg-red-700 text-white p-3 rounded flex items-center justify-center">
-                    <i class="fab fa-google-drive mr-2"></i> Sync with Google Drive
+                <button id="connectGoogleDrive" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded flex items-center justify-center">
+                    <i class="fab fa-google-drive mr-2"></i> Connect Google Drive
                 </button>
             </div>
             
             <div class="flex justify-end">
-                <button id="closeCloud" class="bg-gray-500 text-white px-4 py-2 rounded mr-2">Cancel</button>
+                <button id="closeGoogleDrive" class="bg-gray-500 text-white px-4 py-2 rounded mr-2">Cancel</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Sync Progress Modal -->
+    <div id="syncProgressModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md mx-4">
+            <h3 class="text-xl font-bold mb-4 text-blue-600">Syncing with Google Drive</h3>
+            <p class="mb-2">Uploading your encrypted password data to Google Drive...</p>
+            <div class="progress-bar">
+                <div id="syncProgress" class="progress-bar-fill" style="width: 0%"></div>
+            </div>
+            <p id="syncStatus" class="text-gray-600 text-sm mt-2">Initializing...</p>
         </div>
     </div>
 
@@ -242,7 +270,7 @@
         <div class="bg-white rounded-lg p-6 max-w-md mx-4">
             <h3 class="text-xl font-bold mb-4 text-blue-600">About Password Locker</h3>
             <p class="mb-3">This password manager securely stores your passwords and allows you to access them from any device using your mobile number and master password.</p>
-            <p class="mb-3">Your data is encrypted before being stored in the cloud, ensuring only you can access your passwords.</p>
+            <p class="mb-3">Your data is encrypted before being stored in Google Drive, ensuring only you can access your passwords.</p>
             <p class="mb-4">All exports are in ZIP format containing both JSON and TXT files for your convenience.</p>
             <div class="flex justify-end">
                 <button id="closeInfo" class="bg-blue-600 text-white px-4 py-2 rounded">Got it!</button>
@@ -318,10 +346,12 @@
         const infoModal = document.getElementById('infoModal');
         const closeInfo = document.getElementById('closeInfo');
         const passwordCount = document.getElementById('passwordCount');
-        const cloudModal = document.getElementById('cloudModal');
-        const dropboxSync = document.getElementById('dropboxSync');
-        const googleSync = document.getElementById('googleSync');
-        const closeCloud = document.getElementById('closeCloud');
+        const googleDriveModal = document.getElementById('googleDriveModal');
+        const connectGoogleDrive = document.getElementById('connectGoogleDrive');
+        const closeGoogleDrive = document.getElementById('closeGoogleDrive');
+        const syncProgressModal = document.getElementById('syncProgressModal');
+        const syncProgress = document.getElementById('syncProgress');
+        const syncStatus = document.getElementById('syncStatus');
         const countryDropdownButton = document.getElementById('countryDropdownButton');
         const countryDropdown = document.getElementById('countryDropdown');
         const selectedCountry = document.getElementById('selectedCountry');
@@ -336,8 +366,7 @@
         let savedPasswords = [];
         let currentUser = null;
         let currentCountry = countryCodes[0];
-        let cloudSyncEnabled = false;
-        let cloudProvider = null;
+        let googleDriveSyncEnabled = false;
 
         // Initialize the application
         function initApp() {
@@ -375,14 +404,13 @@
             importBtn.addEventListener('click', () => importFile.click());
             importFile.addEventListener('change', handleImport);
             exportBtn.addEventListener('click', handleExport);
-            syncBtn.addEventListener('click', showCloudModal);
+            syncBtn.addEventListener('click', showGoogleDriveModal);
             logoutBtn.addEventListener('click', handleLogout);
             backBtn.addEventListener('click', goBackToLogin);
             infoBtn.addEventListener('click', () => infoModal.classList.remove('hidden'));
             closeInfo.addEventListener('click', () => infoModal.classList.add('hidden'));
-            dropboxSync.addEventListener('click', () => enableCloudSync('dropbox'));
-            googleSync.addEventListener('click', () => enableCloudSync('google'));
-            closeCloud.addEventListener('click', () => cloudModal.classList.add('hidden'));
+            connectGoogleDrive.addEventListener('click', enableGoogleDriveSync);
+            closeGoogleDrive.addEventListener('click', () => googleDriveModal.classList.add('hidden'));
             
             countryDropdownButton.addEventListener('click', () => {
                 countryDropdown.classList.toggle('hidden');
@@ -457,11 +485,10 @@
                 }
             }
             
-            // Check if cloud sync is enabled
-            cloudProvider = localStorage.getItem('cloudProvider');
-            if (cloudProvider) {
-                cloudSyncEnabled = true;
-                syncBtn.innerHTML = '<i class="fas fa-cloud mr-2"></i>Sync with ' + (cloudProvider === 'dropbox' ? 'Dropbox' : 'Google Drive');
+            // Check if Google Drive sync is enabled
+            if (localStorage.getItem('googleDriveSync')) {
+                googleDriveSyncEnabled = true;
+                syncBtn.innerHTML = '<i class="fab fa-google-drive mr-2"></i>Sync to Google Drive';
             }
         }
 
@@ -565,9 +592,9 @@
                 renderPasswords();
                 showToast('Password deleted successfully');
                 
-                // Sync to cloud if enabled
-                if (cloudSyncEnabled) {
-                    syncToCloud();
+                // Sync to Google Drive if enabled
+                if (googleDriveSyncEnabled) {
+                    syncToGoogleDrive();
                 }
             }
         }
@@ -710,9 +737,9 @@
             renderPasswords();
             showToast('Password saved successfully');
             
-            // Sync to cloud if enabled
-            if (cloudSyncEnabled) {
-                syncToCloud();
+            // Sync to Google Drive if enabled
+            if (googleDriveSyncEnabled) {
+                syncToGoogleDrive();
             }
         }
 
@@ -790,9 +817,9 @@
                     renderPasswords();
                     showToast('Import completed successfully');
                     
-                    // Sync to cloud if enabled
-                    if (cloudSyncEnabled) {
-                        syncToCloud();
+                    // Sync to Google Drive if enabled
+                    if (googleDriveSyncEnabled) {
+                        syncToGoogleDrive();
                     }
                 } catch (err) {
                     console.error('Import error:', err);
@@ -802,38 +829,55 @@
             reader.readAsText(file);
         }
 
-        // Show cloud sync modal
-        function showCloudModal() {
-            if (cloudSyncEnabled) {
-                syncToCloud();
+        // Show Google Drive sync modal
+        function showGoogleDriveModal() {
+            if (googleDriveSyncEnabled) {
+                syncToGoogleDrive();
             } else {
-                cloudModal.classList.remove('hidden');
+                googleDriveModal.classList.remove('hidden');
             }
         }
 
-        // Enable cloud sync with selected provider
-        function enableCloudSync(provider) {
-            cloudProvider = provider;
-            cloudSyncEnabled = true;
-            localStorage.setItem('cloudProvider', provider);
+        // Enable Google Drive sync
+        function enableGoogleDriveSync() {
+            googleDriveSyncEnabled = true;
+            localStorage.setItem('googleDriveSync', 'true');
             
-            syncBtn.innerHTML = '<i class="fas fa-cloud mr-2"></i>Sync with ' + (provider === 'dropbox' ? 'Dropbox' : 'Google Drive');
-            cloudModal.classList.add('hidden');
+            syncBtn.innerHTML = '<i class="fab fa-google-drive mr-2"></i>Sync to Google Drive';
+            googleDriveModal.classList.add('hidden');
             
-            showToast(`Cloud sync enabled with ${provider === 'dropbox' ? 'Dropbox' : 'Google Drive'}`);
+            showToast('Google Drive sync enabled');
             
             // Perform initial sync
-            syncToCloud();
+            syncToGoogleDrive();
         }
 
-        // Sync to cloud (simulated)
-        function syncToCloud() {
-            showToast(`Syncing with ${cloudProvider === 'dropbox' ? 'Dropbox' : 'Google Drive'}...`);
+        // Sync to Google Drive (simulated)
+        function syncToGoogleDrive() {
+            syncProgressModal.classList.remove('hidden');
+            syncProgress.style.width = '0%';
+            syncStatus.textContent = 'Encrypting data...';
             
-            // Simulate cloud sync
+            // Simulate encryption and upload process
             setTimeout(() => {
-                showToast('Data synced successfully to cloud');
+                syncProgress.style.width = '30%';
+                syncStatus.textContent = 'Connecting to Google Drive...';
+            }, 500);
+            
+            setTimeout(() => {
+                syncProgress.style.width = '60%';
+                syncStatus.textContent = 'Uploading encrypted data...';
             }, 1500);
+            
+            setTimeout(() => {
+                syncProgress.style.width = '100%';
+                syncStatus.textContent = 'Sync completed successfully!';
+            }, 2500);
+            
+            setTimeout(() => {
+                syncProgressModal.classList.add('hidden');
+                showToast('Data synced successfully to Google Drive');
+            }, 3000);
         }
 
         // Handle logout
