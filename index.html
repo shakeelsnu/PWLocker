@@ -3,10 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Offline Password Locker</title>
+<title>Password Locker</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </head>
 <body class="bg-gray-100 p-4">
 
@@ -15,7 +18,7 @@
 
 <!-- Login -->
 <div id="login-container" class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
-  <h1 class="text-2xl font-bold mb-4 text-center">Offline Password Locker</h1>
+  <h1 class="text-2xl font-bold mb-4 text-center">Password Locker</h1>
   <label class="block text-sm font-medium mb-1">Mobile Number (with +country code)</label>
   <input type="text" id="mobile-number" placeholder="+123456789" class="w-full p-2 border mb-3 rounded" />
   <div id="set-password-login" class="hidden">
@@ -24,6 +27,7 @@
     <button id="submit-password" class="w-full bg-blue-600 hover:bg-blue-700 p-2 text-white rounded">Continue</button>
   </div>
   <button id="next-button" class="w-full bg-blue-600 hover:bg-blue-700 p-2 text-white rounded mt-2">Next</button>
+  <button id="google-signin" class="w-full bg-red-600 hover:bg-red-700 p-2 text-white rounded mt-2">Sign in with Google</button>
   <button id="forgot-password" class="w-full bg-yellow-600 hover:bg-yellow-700 p-2 text-white rounded mt-2">Forgot Password</button>
 </div>
 
@@ -59,6 +63,36 @@
 </div>
 
 <script>
+// Firebase Config (replace with your own)
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+// Google Sign-in
+const googleBtn=document.getElementById('google-signin');
+googleBtn.onclick=()=>{
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider)
+    .then(result => {
+      const user=result.user;
+      document.getElementById('user-mobile').textContent=user.email;
+      document.getElementById('login-container').classList.add('hidden');
+      document.getElementById('app-container').classList.remove('hidden');
+      showToast('Google Sign-in successful','success');
+    })
+    .catch(err=>{
+      showToast('Google Sign-in failed','error');
+      console.error(err);
+    });
+};
+
 function getUsers(){return JSON.parse(localStorage.getItem('users')||'{}');}
 function setUsers(users){localStorage.setItem('users',JSON.stringify(users));}
 
