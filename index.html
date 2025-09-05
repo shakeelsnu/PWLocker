@@ -1,256 +1,181 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Password Locker</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<!-- Intl Tel Input for country code + validation -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/css/intlTelInput.css"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Password Locker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="https://unpkg.com/libphonenumber-js@1.10.25/bundle/libphonenumber-js.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
-<body class="bg-gray-100 p-4">
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-6" id="auth-container">
+    <h1 class="text-2xl font-bold mb-4 text-center">Password Locker</h1>
+    <div id="login-section">
+      <label class="block mb-2">Mobile Number</label>
+      <input type="tel" id="mobileInput" placeholder="+97412345678" class="w-full p-2 border rounded mb-2" />
+      <p id="mobileError" class="text-red-500 text-sm hidden">Invalid mobile number</p>
 
-<!-- Toast Notification -->
-<div id="toast" class="fixed top-4 right-4 px-4 py-2 rounded shadow-md text-white hidden"></div>
+      <label class="block mb-2">Password</label>
+      <input type="password" id="passwordInput" placeholder="Password" class="w-full p-2 border rounded mb-4" />
 
-<!-- Login -->
-<div id="login-container" class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
-  <h1 class="text-2xl font-bold mb-4 text-center">Password Locker</h1>
-  <label class="block text-sm font-medium mb-1">Mobile Number</label>
-  <input type="tel" id="mobile-number" class="w-full p-2 border mb-3 rounded" />
-  <div id="set-password-login" class="hidden">
-    <label class="block text-sm font-medium mb-1" id="pw-label">Enter Password (4–6 digits)</label>
-    <input type="password" id="set-password" inputmode="numeric" pattern="\d*" maxlength="6" placeholder="••••" class="w-full p-2 border mb-3 rounded" />
-    <button id="submit-password" class="w-full bg-blue-600 hover:bg-blue-700 p-2 text-white rounded">Continue</button>
-  </div>
-  <button id="next-button" class="w-full bg-blue-600 hover:bg-blue-700 p-2 text-white rounded mt-2">Next</button>
-  <button id="google-signin" class="w-full bg-red-600 hover:bg-red-700 p-2 text-white rounded mt-2">Sign in with Google</button>
-  <button id="forgot-password" class="w-full bg-yellow-600 hover:bg-yellow-700 p-2 text-white rounded mt-2">Forgot Password</button>
-</div>
+      <label class="block mb-2">Email (for password recovery)</label>
+      <input type="email" id="emailInput" placeholder="you@example.com" class="w-full p-2 border rounded mb-4" />
 
-<!-- Forgot Password -->
-<div id="forgot-container" class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md hidden">
-  <h2 class="text-xl font-bold mb-4 text-center">Recover Password</h2>
-  <input type="text" id="forgot-mobile" placeholder="Your Mobile (+123...)" class="w-full p-2 border mb-2 rounded" />
-  <input type="email" id="forgot-email" placeholder="Registered Email" class="w-full p-2 border mb-2 rounded" />
-  <button id="submit-forgot" class="w-full bg-blue-600 hover:bg-blue-700 p-2 text-white rounded mt-2">Submit</button>
-  <button id="back-login" class="w-full bg-gray-600 hover:bg-gray-700 p-2 text-white rounded mt-2">Back to Login</button>
-</div>
+      <button id="loginBtn" class="w-full bg-blue-500 text-white p-2 rounded mb-2">Login</button>
+      <button id="googleBtn" class="w-full bg-red-500 text-white p-2 rounded mb-2">Sign in with Google</button>
+      <button id="signupBtn" class="w-full bg-green-500 text-white p-2 rounded mb-2">Sign Up</button>
+      <button id="forgotBtn" class="w-full bg-yellow-500 text-black p-2 rounded">Forgot Password</button>
+    </div>
 
-<!-- Main App -->
-<div id="app-container" class="max-w-4xl mx-auto bg-gray-50 p-6 rounded-lg shadow-md hidden">
-  <div class="flex items-center justify-between">
-    <h2 class="text-xl font-bold mb-2">Logged in as: <span id="user-mobile"></span></h2>
-    <button id="logout" class="bg-red-600 hover:bg-red-700 text-white p-2 rounded">Logout</button>
-  </div>
-  <div class="bg-white p-4 rounded shadow-md mt-3">
-    <h3 class="font-bold mb-2">Add New Credential</h3>
-    <input type="text" id="new-website" placeholder="Website/Service" class="w-full p-2 border mb-2 rounded" />
-    <input type="text" id="new-username" placeholder="Username/Email" class="w-full p-2 border mb-2 rounded" />
-    <input type="text" id="new-password" placeholder="Password" class="w-full p-2 border mb-2 rounded" />
-    <button id="add-password" class="w-full bg-indigo-600 hover:bg-indigo-700 p-2 text-white rounded mb-2">Save Password</button>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
-      <button id="backup-zip" class="bg-gray-700 hover:bg-gray-800 p-2 text-white rounded">Export ALL as ZIP</button>
-      <input type="file" id="import-any" class="col-span-1 md:col-span-2 w-full" accept=".zip" />
-      <button id="import-button" class="bg-green-600 hover:bg-green-700 p-2 text-white rounded">Import (.zip)</button>
+    <div id="password-manager" class="hidden">
+      <h2 class="text-xl font-bold mb-4">Saved Passwords</h2>
+      <div id="savedList" class="space-y-2"></div>
+      <button id="exportBtn" class="w-full bg-purple-500 text-white p-2 rounded mt-4">Export All (ZIP: JSON + TXT)</button>
+      <input type="file" id="importFile" accept=".zip" class="hidden" />
+      <button id="importBtn" class="w-full bg-yellow-500 text-white p-2 rounded mt-2">Import (ZIP)</button>
     </div>
   </div>
-  <h3 class="text-lg font-bold mt-6">Your Saved Passwords</h3>
-  <ul id="password-list" class="space-y-2 mt-2"></ul>
-</div>
 
-<script>
-// Firebase Config (replace with your own)
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
+  <div id="toast-container" class="fixed bottom-4 right-4 space-y-2 z-50"></div>
 
-// Google Sign-in
-const googleBtn=document.getElementById('google-signin');
-googleBtn.onclick=()=>{
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider)
-    .then(result => {
-      const user=result.user;
-      document.getElementById('user-mobile').textContent=user.email;
-      document.getElementById('login-container').classList.add('hidden');
-      document.getElementById('app-container').classList.remove('hidden');
-      showToast('Google Sign-in successful','success');
-      localStorage.setItem('autoLogin', JSON.stringify({email:user.email, provider:'google'}));
-    })
-    .catch(err=>{
-      showToast('Google Sign-in failed','error');
-      console.error(err);
-    });
-};
+  <script>
+    const loginBtn = document.getElementById('loginBtn');
+    const signupBtn = document.getElementById('signupBtn');
+    const googleBtn = document.getElementById('googleBtn');
+    const forgotBtn = document.getElementById('forgotBtn');
+    const mobileInput = document.getElementById('mobileInput');
+    const passwordInput = document.getElementById('passwordInput');
+    const emailInput = document.getElementById('emailInput');
+    const mobileError = document.getElementById('mobileError');
 
-// Auto login if previously saved
-window.addEventListener('DOMContentLoaded',()=>{
-  const saved=JSON.parse(localStorage.getItem('autoLogin')||'null');
-  if(saved&&saved.provider==='google'){
-    document.getElementById('user-mobile').textContent=saved.email;
-    document.getElementById('login-container').classList.add('hidden');
-    document.getElementById('app-container').classList.remove('hidden');
-  }
-});
+    const passwordManager = document.getElementById('password-manager');
+    const savedList = document.getElementById('savedList');
+    const exportBtn = document.getElementById('exportBtn');
+    const importBtn = document.getElementById('importBtn');
+    const importFile = document.getElementById('importFile');
 
-function getUsers(){return JSON.parse(localStorage.getItem('users')||'{}');}
-function setUsers(users){localStorage.setItem('users',JSON.stringify(users));}
+    let savedPasswords = JSON.parse(localStorage.getItem('savedPasswords')) || [];
 
-const loginContainer=document.getElementById('login-container');
-const forgotContainer=document.getElementById('forgot-container');
-const appContainer=document.getElementById('app-container');
-
-const toast=document.getElementById('toast');
-function showToast(msg,type="success"){
-  toast.textContent=msg;
-  toast.className=`fixed top-4 right-4 px-4 py-2 rounded shadow-md text-white ${type==="success"?"bg-green-600":"bg-red-600"}`;
-  toast.classList.remove('hidden');
-  setTimeout(()=>toast.classList.add('hidden'),2000);
-}
-
-const nextBtn=document.getElementById('next-button');
-const submitPw=document.getElementById('submit-password');
-const mobileInput=document.getElementById('mobile-number');
-
-// IntlTelInput setup
-const iti=intlTelInput(mobileInput,{initialCountry:"auto",utilsScript:"https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/utils.js"});
-
-let currentUser=null;
-
-function renderPasswords(){
-  const users=getUsers();
-  const list=document.getElementById('password-list');
-  list.innerHTML='';
-  if(currentUser&&users[currentUser]){
-    users[currentUser].data.forEach((item,idx)=>{
-      const li=document.createElement('li');
-      li.className='bg-white p-3 rounded shadow';
-      li.innerHTML=`<div>Website: ${item.website}</div><div>Username: ${item.username}</div><div>Password: ${item.password}</div>`;
-      const delBtn=document.createElement('button');
-      delBtn.textContent='Delete';
-      delBtn.className='mt-2 bg-red-600 hover:bg-red-700 text-white p-1 rounded';
-      delBtn.onclick=()=>{
-        if(confirm('Should I delete this saved password?')){
-          users[currentUser].data.splice(idx,1);
-          setUsers(users);
-          renderPasswords();
-          showToast('Password deleted','success');
-        }
-      };
-      li.appendChild(delBtn);
-      list.appendChild(li);
-    });
-  }
-}
-
-// Next button with validation
-nextBtn.onclick=()=>{
-  if(!iti.isValidNumber()){showToast('Invalid mobile number','error');return;}
-  const mobile=iti.getNumber();
-  const users=getUsers();
-  document.getElementById('set-password-login').classList.remove('hidden');
-  if(users[mobile]){
-    document.getElementById('pw-label').textContent='Enter Password (4–6 digits)';
-  } else {
-    document.getElementById('pw-label').textContent='Create New Password (4–6 digits)';
-  }
-};
-
-// Submit password
-submitPw.onclick=()=>{
-  if(!iti.isValidNumber()){showToast('Invalid mobile number','error');return;}
-  const mobile=iti.getNumber();
-  const pw=document.getElementById('set-password').value.trim();
-  if(!pw){showToast('Enter password','error');return;}
-  if(pw.length<4||pw.length>6){showToast('Password must be 4–6 digits','error');return;}
-  const users=getUsers();
-  if(!users[mobile]){users[mobile]={password:pw,email:'',data:[]};setUsers(users);} 
-  if(users[mobile].password!==pw){showToast('Password not correct','error');return;}
-  loginContainer.classList.add('hidden');
-  appContainer.classList.remove('hidden');
-  document.getElementById('user-mobile').textContent=mobile;
-  currentUser=mobile;
-  localStorage.setItem('autoLogin', JSON.stringify({mobile,pw,provider:'local'}));
-  renderPasswords();
-  showToast('Login successful','success');
-};
-
-// Add password
-const addBtn=document.getElementById('add-password');
-addBtn.onclick=()=>{
-  if(!currentUser)return;
-  const website=document.getElementById('new-website').value.trim();
-  const username=document.getElementById('new-username').value.trim();
-  const password=document.getElementById('new-password').value.trim();
-  if(!website||!username||!password){showToast('Fill all fields','error');return;}
-  const users=getUsers();
-  users[currentUser].data.push({website,username,password});
-  setUsers(users);
-  renderPasswords();
-  document.getElementById('new-website').value='';
-  document.getElementById('new-username').value='';
-  document.getElementById('new-password').value='';
-  showToast('Password saved','success');
-};
-
-// Export ZIP
-const backupZip=document.getElementById('backup-zip');
-backupZip.onclick=async()=>{
-  if(!currentUser)return;
-  const users=getUsers();
-  const zip=new JSZip();
-  const jsonData=JSON.stringify(users[currentUser].data,null,2);
-  const textData=users[currentUser].data.map(item=>`Website: ${item.website}\nUsername: ${item.username}\nPassword: ${item.password}\n`).join("\n");
-  zip.file("data.json",jsonData);
-  zip.file("data.txt",textData);
-  const content=await zip.generateAsync({type:"blob"});
-  saveAs(content,`backup_${currentUser}.zip`);
-  showToast('Data exported as ZIP','success');
-};
-
-// Import ZIP
-const importBtn=document.getElementById('import-button');
-importBtn.onclick=async()=>{
-  if(!currentUser)return;
-  const file=document.getElementById('import-any').files[0];
-  if(!file){showToast('Choose a file first','error');return;}
-  const users=getUsers();
-  if(file.name.endsWith('.zip')){
-    const zip=await JSZip.loadAsync(file);
-    const jsonFile=zip.file("data.json");
-    if(jsonFile){
-      const text=await jsonFile.async("string");
-      users[currentUser].data=JSON.parse(text);
-      setUsers(users);
-      renderPasswords();
-      showToast('Data imported','success');
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `p-3 rounded shadow text-white ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+      toast.innerText = message;
+      document.getElementById('toast-container').appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
     }
-  }
-};
 
-// Logout
-const logoutBtn=document.getElementById('logout');
-logoutBtn.onclick=()=>{
-  currentUser=null;
-  localStorage.removeItem('autoLogin');
-  appContainer.classList.add('hidden');
-  loginContainer.classList.remove('hidden');
-  showToast('Logged out','success');
-};
-</script>
-</body>
-</html>
+    function validateMobile(number) {
+      try {
+        const parsed = libphonenumber.parsePhoneNumber(number);
+        return parsed.isValid();
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function renderPasswords() {
+      savedList.innerHTML = '';
+      savedPasswords.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'border p-2 rounded bg-gray-50';
+        div.innerHTML = `
+          <p><strong>Website:</strong> ${item.website}</p>
+          <p><strong>Username:</strong> ${item.username}</p>
+          <p><strong>Password:</strong> ${item.password}</p>
+          <button class="bg-red-500 text-white px-2 py-1 rounded mt-2" onclick="deletePassword(${idx})">Delete</button>
+        `;
+        savedList.appendChild(div);
+      });
+    }
+
+    function deletePassword(idx) {
+      if (confirm('Should I delete this saved password?')) {
+        savedPasswords.splice(idx, 1);
+        localStorage.setItem('savedPasswords', JSON.stringify(savedPasswords));
+        renderPasswords();
+        showToast('Deleted successfully');
+      }
+    }
+
+    loginBtn.onclick = () => {
+      const mobile = mobileInput.value.trim();
+      const pw = passwordInput.value.trim();
+      if (!validateMobile(mobile)) { mobileError.classList.remove('hidden'); return; }
+      mobileError.classList.add('hidden');
+
+      const storedPw = localStorage.getItem(`pw_${mobile}`);
+      if (storedPw && storedPw === pw) {
+        document.getElementById('login-section').classList.add('hidden');
+        passwordManager.classList.remove('hidden');
+        renderPasswords();
+        showToast('Login successful');
+      } else {
+        showToast('Wrong password', 'error');
+      }
+    };
+
+    signupBtn.onclick = () => {
+      const mobile = mobileInput.value.trim();
+      const pw = passwordInput.value.trim();
+      const email = emailInput.value.trim();
+
+      if (!validateMobile(mobile)) { mobileError.classList.remove('hidden'); return; }
+      mobileError.classList.add('hidden');
+      if (!email) { showToast('Email required', 'error'); return; }
+
+      if (pw.length < 4 || pw.length > 6) { showToast('Password must be 4–6 digits', 'error'); return; }
+
+      localStorage.setItem(`pw_${mobile}`, pw);
+      localStorage.setItem(`email_${mobile}`, email);
+      showToast('Signed up successfully');
+    };
+
+    forgotBtn.onclick = () => {
+      const mobile = mobileInput.value.trim();
+      if (!validateMobile(mobile)) { mobileError.classList.remove('hidden'); return; }
+      mobileError.classList.add('hidden');
+      const email = localStorage.getItem(`email_${mobile}`);
+      const pw = localStorage.getItem(`pw_${mobile}`);
+      if (email && pw) {
+        alert(`Password sent to ${email}: ${pw}`); // Replace with actual email sending in production
+      } else {
+        showToast('No password found for this mobile', 'error');
+      }
+    };
+
+    googleBtn.onclick = () => {
+      showToast('Redirecting to Google sign-in...');
+      // Here integrate proper Google OAuth2 flow using gsi client or Firebase OAuth
+    };
+
+    exportBtn.onclick = () => {
+      const zip = new JSZip();
+      const jsonData = JSON.stringify(savedPasswords, null, 2);
+      const txtData = savedPasswords.map(p => `Website: ${p.website}\nUsername: ${p.username}\nPassword: ${p.password}`).join('\n\n');
+      zip.file('data.json', jsonData);
+      zip.file('data.txt', txtData);
+      zip.generateAsync({ type: 'blob' }).then(content => saveAs(content, 'passwords.zip'));
+      showToast('Exported as ZIP');
+    };
+
+    importBtn.onclick = () => importFile.click();
+    importFile.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      JSZip.loadAsync(file).then(zip => zip.file('data.json').async('string'))
+        .then(jsonStr => {
+          savedPasswords = JSON.parse(jsonStr);
+          localStorage.setItem('savedPasswords', JSON.stringify(savedPasswords));
+          renderPasswords();
+          showToast('Imported successfully');
+        }).catch(() => showToast('Import failed', 'error'));
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const saved = JSON.parse(localStorage.getItem('autoLogin') || 'null');
+      if (saved) {
+        mobileInput.value = saved.mobile;
+       
