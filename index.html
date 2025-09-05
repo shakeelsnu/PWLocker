@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Global Password Locker with Cloud Sync</title>
+    <title>Password Locker with Enhanced Security</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -65,6 +65,20 @@
             visibility: visible;
             opacity: 1;
         }
+        .password-input-container {
+            position: relative;
+        }
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #6b7280;
+        }
+        .toggle-password:hover {
+            color: #4b5563;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
@@ -108,7 +122,12 @@
 
                 <div class="mb-4">
                     <label class="block mb-2 font-medium">Password</label>
-                    <input type="password" id="passwordInput" placeholder="Your master password" class="w-full p-2 border rounded" />
+                    <div class="password-input-container">
+                        <input type="password" id="passwordInput" placeholder="Your master password" class="w-full p-2 border rounded" />
+                        <span class="toggle-password" id="toggleLoginPassword">
+                            <i class="fas fa-eye"></i>
+                        </span>
+                    </div>
                 </div>
 
                 <div class="mb-6">
@@ -147,16 +166,21 @@
                     <h3 class="font-medium mb-2"><i class="fas fa-plus-circle mr-2 text-blue-600"></i>Add New Password</h3>
                     <input type="text" id="websiteInput" placeholder="Website/App name" class="w-full p-2 border rounded mb-2" />
                     <input type="text" id="usernameInput" placeholder="Username/Email" class="w-full p-2 border rounded mb-2" />
-                    <div class="flex">
-                        <input type="password" id="newPasswordInput" placeholder="Password" class="flex-1 p-2 border rounded-l" />
-                        <button id="generatePassword" class="bg-gray-200 hover:bg-gray-300 px-3 rounded-r tooltip">
-                            <i class="fas fa-dice"></i>
+                    <div class="password-input-container">
+                        <input type="password" id="newPasswordInput" placeholder="Password" class="w-full p-2 border rounded" />
+                        <span class="toggle-password" id="toggleNewPassword">
+                            <i class="fas fa-eye"></i>
+                        </span>
+                    </div>
+                    <div class="flex mt-2">
+                        <button id="generatePassword" class="flex-1 bg-gray-200 hover:bg-gray-300 p-2 rounded mr-2 tooltip">
+                            <i class="fas fa-dice mr-1"></i> Generate
                             <span class="tooltiptext">Generate secure password</span>
                         </button>
+                        <button id="addPasswordBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded transition">
+                            <i class="fas fa-save mr-1"></i> Save
+                        </button>
                     </div>
-                    <button id="addPasswordBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded mt-2 transition">
-                        <i class="fas fa-save mr-2"></i>Save Password
-                    </button>
                 </div>
                 
                 <div class="mb-4">
@@ -233,7 +257,6 @@
 
     <script>
         // Country codes with flags and phone number lengths
-        // This includes Qatar with its flag and correct phone number format
         const countryCodes = [
             { code: "+1", flag: "🇺🇸", name: "United States", length: 10 },
             { code: "+44", flag: "🇬🇧", name: "United Kingdom", length: 10 },
@@ -269,7 +292,7 @@
             { code: "+43", flag: "🇦🇹", name: "Austria", length: 10 },
             { code: "+420", flag: "🇨🇿", name: "Czech Republic", length: 9 },
             { code: "+40", flag: "🇷🇴", name: "Romania", length: 9 },
-            { code: "+974", flag: "🇶🇦", name: "Qatar", length: 8 }  // Added Qatar with correct flag and format :cite[1]
+            { code: "+974", flag: "🇶🇦", name: "Qatar", length: 8 }
         ];
 
         // DOM Elements
@@ -302,6 +325,8 @@
         const countryDropdownButton = document.getElementById('countryDropdownButton');
         const countryDropdown = document.getElementById('countryDropdown');
         const selectedCountry = document.getElementById('selectedCountry');
+        const toggleLoginPassword = document.getElementById('toggleLoginPassword');
+        const toggleNewPassword = document.getElementById('toggleNewPassword');
 
         const passwordManager = document.getElementById('password-manager');
         const savedList = document.getElementById('savedList');
@@ -365,12 +390,32 @@
             
             mobileInput.addEventListener('input', validateMobileNumber);
             
+            // Toggle password visibility
+            toggleLoginPassword.addEventListener('click', () => {
+                togglePasswordVisibility(passwordInput, toggleLoginPassword);
+            });
+            
+            toggleNewPassword.addEventListener('click', () => {
+                togglePasswordVisibility(newPasswordInput, toggleNewPassword);
+            });
+            
             // Close dropdown when clicking outside
             document.addEventListener('click', (e) => {
                 if (!countryDropdownButton.contains(e.target) && !countryDropdown.contains(e.target)) {
                     countryDropdown.classList.add('hidden');
                 }
             });
+        }
+
+        // Toggle password visibility
+        function togglePasswordVisibility(inputElement, toggleElement) {
+            if (inputElement.type === 'password') {
+                inputElement.type = 'text';
+                toggleElement.innerHTML = '<i class="fas fa-eye-slash"></i>';
+            } else {
+                inputElement.type = 'password';
+                toggleElement.innerHTML = '<i class="fas fa-eye"></i>';
+            }
         }
 
         // Validate mobile number as user types
@@ -502,7 +547,7 @@
             });
         }
 
-        // Toggle password visibility
+        // Toggle password visibility in the saved list
         function togglePasswordVisibility(index) {
             const passwordEl = document.getElementById(`password-${index}`);
             if (passwordEl.textContent === '••••••••') {
@@ -537,6 +582,10 @@
             mobileInput.value = '';
             passwordInput.value = '';
             emailInput.value = '';
+            
+            // Reset password visibility
+            passwordInput.type = 'password';
+            toggleLoginPassword.innerHTML = '<i class="fas fa-eye"></i>';
         }
 
         // Handle login
@@ -654,6 +703,10 @@
             usernameInput.value = '';
             newPasswordInput.value = '';
             
+            // Reset password visibility
+            newPasswordInput.type = 'password';
+            toggleNewPassword.innerHTML = '<i class="fas fa-eye"></i>';
+            
             renderPasswords();
             showToast('Password saved successfully');
             
@@ -674,6 +727,8 @@
             }
             
             newPasswordInput.value = password;
+            newPasswordInput.type = 'text';
+            toggleNewPassword.innerHTML = '<i class="fas fa-eye-slash"></i>';
             showToast('Generated secure password');
         }
 
@@ -795,6 +850,10 @@
             mobileInput.value = '';
             passwordInput.value = '';
             emailInput.value = '';
+            
+            // Reset password visibility
+            passwordInput.type = 'password';
+            toggleLoginPassword.innerHTML = '<i class="fas fa-eye"></i>';
             
             showToast('Logged out successfully');
         }
