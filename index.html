@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Password Locker with Google Drive Sync</title>
+    <title>Password Locker with Google Drive Integration</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -90,6 +90,18 @@
             height: 100%;
             background-color: #10b981;
             transition: width 0.3s ease;
+        }
+        .drive-item {
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .drive-item:hover {
+            background-color: #f3f4f6;
+        }
+        .drive-item.selected {
+            background-color: #e0e7ff;
         }
     </style>
 </head>
@@ -228,6 +240,111 @@
         </div>
     </div>
 
+    <!-- Google Drive File Picker Modal -->
+    <div id="drivePickerModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+            <h3 class="text-xl font-bold mb-4 text-blue-600" id="pickerTitle">Select Google Drive Location</h3>
+            
+            <div class="mb-4 flex items-center justify-between">
+                <div class="flex items-center">
+                    <button id="driveBack" class="p-2 rounded-full hover:bg-gray-100 mr-2 hidden">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <span id="currentPath" class="text-sm text-gray-600">My Drive</span>
+                </div>
+                <button id="createFolder" class="text-blue-600 hover:text-blue-800 text-sm">
+                    <i class="fas fa-folder-plus mr-1"></i> New Folder
+                </button>
+            </div>
+            
+            <div class="border rounded-lg flex-1 overflow-hidden flex flex-col">
+                <div class="p-3 bg-gray-50 border-b flex items-center justify-between">
+                    <span class="font-medium">Name</span>
+                    <span class="font-medium">Modified</span>
+                </div>
+                <div id="driveContents" class="overflow-y-auto flex-1 p-2">
+                    <!-- Drive contents will be populated here -->
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-cloud text-3xl mb-2"></i>
+                        <p>Loading Google Drive contents...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4 flex justify-between items-center">
+                <div>
+                    <span id="selectedItemInfo" class="text-sm text-gray-600">No item selected</span>
+                </div>
+                <div class="flex space-x-2">
+                    <button id="cancelPicker" class="bg-gray-500 text-white px-4 py-2 rounded">Cancel</button>
+                    <button id="confirmPicker" class="bg-blue-600 text-white px-4 py-2 rounded">Select</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Folder Modal -->
+    <div id="createFolderModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md mx-4">
+            <h3 class="text-xl font-bold mb-4 text-blue-600">Create New Folder</h3>
+            
+            <div class="mb-4">
+                <label class="block mb-2 font-medium">Folder Name</label>
+                <input type="text" id="newFolderName" placeholder="Enter folder name" class="w-full p-2 border rounded" />
+            </div>
+            
+            <div class="flex justify-end space-x-2">
+                <button id="cancelCreateFolder" class="bg-gray-500 text-white px-4 py-2 rounded">Cancel</button>
+                <button id="confirmCreateFolder" class="bg-blue-600 text-white px-4 py-2 rounded">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Options Modal -->
+    <div id="exportModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md mx-4">
+            <h3 class="text-xl font-bold mb-4 text-blue-600">Export Options</h3>
+            <p class="mb-4">Choose how you want to export your password data:</p>
+            
+            <div class="space-y-3 mb-6">
+                <button id="exportDevice" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded flex items-center justify-center">
+                    <i class="fas fa-download mr-2"></i> Download to Device
+                </button>
+                <button id="exportGoogleDrive" class="w-full bg-green-600 hover:bg-green-700 text-white p-3 rounded flex items-center justify-center">
+                    <i class="fab fa-google-drive mr-2"></i> Save to Google Drive
+                </button>
+                <button id="exportBoth" class="w-full bg-purple-600 hover:bg-purple-700 text-white p-3 rounded flex items-center justify-center">
+                    <i class="fas fa-sync-alt mr-2"></i> Both (Device + Google Drive)
+                </button>
+            </div>
+            
+            <div class="flex justify-end">
+                <button id="closeExport" class="bg-gray-500 text-white px-4 py-2 rounded mr-2">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Options Modal -->
+    <div id="importModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md mx-4">
+            <h3 class="text-xl font-bold mb-4 text-blue-600">Import Options</h3>
+            <p class="mb-4">Choose where to import your password data from:</p>
+            
+            <div class="space-y-3 mb-6">
+                <button id="importDevice" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded flex items-center justify-center">
+                    <i class="fas fa-upload mr-2"></i> From Device
+                </button>
+                <button id="importGoogleDrive" class="w-full bg-green-600 hover:bg-green-700 text-white p-3 rounded flex items-center justify-center">
+                    <i class="fab fa-google-drive mr-2"></i> From Google Drive
+                </button>
+            </div>
+            
+            <div class="flex justify-end">
+                <button id="closeImport" class="bg-gray-500 text-white px-4 py-2 rounded mr-2">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Google Drive Sync Modal -->
     <div id="googleDriveModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
         <div class="bg-white rounded-lg p-6 max-w-md mx-4">
@@ -256,8 +373,8 @@
     <!-- Sync Progress Modal -->
     <div id="syncProgressModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
         <div class="bg-white rounded-lg p-6 max-w-md mx-4">
-            <h3 class="text-xl font-bold mb-4 text-blue-600">Syncing with Google Drive</h3>
-            <p class="mb-2">Uploading your encrypted password data to Google Drive...</p>
+            <h3 class="text-xl font-bold mb-4 text-blue-600" id="progressTitle">Processing</h3>
+            <p class="mb-2" id="progressDescription">Processing your request...</p>
             <div class="progress-bar">
                 <div id="syncProgress" class="progress-bar-fill" style="width: 0%"></div>
             </div>
@@ -352,11 +469,35 @@
         const syncProgressModal = document.getElementById('syncProgressModal');
         const syncProgress = document.getElementById('syncProgress');
         const syncStatus = document.getElementById('syncStatus');
+        const progressTitle = document.getElementById('progressTitle');
+        const progressDescription = document.getElementById('progressDescription');
         const countryDropdownButton = document.getElementById('countryDropdownButton');
         const countryDropdown = document.getElementById('countryDropdown');
         const selectedCountry = document.getElementById('selectedCountry');
         const toggleLoginPassword = document.getElementById('toggleLoginPassword');
         const toggleNewPassword = document.getElementById('toggleNewPassword');
+        const exportModal = document.getElementById('exportModal');
+        const exportDevice = document.getElementById('exportDevice');
+        const exportGoogleDrive = document.getElementById('exportGoogleDrive');
+        const exportBoth = document.getElementById('exportBoth');
+        const closeExport = document.getElementById('closeExport');
+        const importModal = document.getElementById('importModal');
+        const importDevice = document.getElementById('importDevice');
+        const importGoogleDriveBtn = document.getElementById('importGoogleDrive');
+        const closeImport = document.getElementById('closeImport');
+        const drivePickerModal = document.getElementById('drivePickerModal');
+        const pickerTitle = document.getElementById('pickerTitle');
+        const driveBack = document.getElementById('driveBack');
+        const currentPath = document.getElementById('currentPath');
+        const createFolder = document.getElementById('createFolder');
+        const driveContents = document.getElementById('driveContents');
+        const selectedItemInfo = document.getElementById('selectedItemInfo');
+        const cancelPicker = document.getElementById('cancelPicker');
+        const confirmPicker = document.getElementById('confirmPicker');
+        const createFolderModal = document.getElementById('createFolderModal');
+        const newFolderName = document.getElementById('newFolderName');
+        const cancelCreateFolder = document.getElementById('cancelCreateFolder');
+        const confirmCreateFolder = document.getElementById('confirmCreateFolder');
 
         const passwordManager = document.getElementById('password-manager');
         const savedList = document.getElementById('savedList');
@@ -367,6 +508,59 @@
         let currentUser = null;
         let currentCountry = countryCodes[0];
         let googleDriveSyncEnabled = false;
+        let pickerMode = ''; // 'export' or 'import'
+        let currentDrivePath = ['root'];
+        let selectedDriveItem = null;
+
+        // Mock Google Drive structure for demonstration
+        const mockGoogleDrive = {
+            root: {
+                name: 'My Drive',
+                type: 'folder',
+                children: {
+                    'Documents': {
+                        name: 'Documents',
+                        type: 'folder',
+                        children: {
+                            'Passwords': {
+                                name: 'Passwords',
+                                type: 'folder',
+                                children: {
+                                    'backup_2023.zip': {
+                                        name: 'backup_2023.zip',
+                                        type: 'file',
+                                        modified: '2023-10-15',
+                                        size: '2.4 MB'
+                                    },
+                                    'passwords_2023.zip': {
+                                        name: 'passwords_2023.zip',
+                                        type: 'file',
+                                        modified: '2023-11-05',
+                                        size: '3.1 MB'
+                                    }
+                                }
+                            },
+                            'Work': {
+                                name: 'Work',
+                                type: 'folder',
+                                children: {}
+                            }
+                        }
+                    },
+                    'Images': {
+                        name: 'Images',
+                        type: 'folder',
+                        children: {}
+                    },
+                    'password_backup.zip': {
+                        name: 'password_backup.zip',
+                        type: 'file',
+                        modified: '2023-11-20',
+                        size: '1.8 MB'
+                    }
+                }
+            }
+        };
 
         // Initialize the application
         function initApp() {
@@ -401,9 +595,9 @@
             forgotBtn.addEventListener('click', handleForgotPassword);
             addPasswordBtn.addEventListener('click', handleAddPassword);
             generatePassword.addEventListener('click', generateRandomPassword);
-            importBtn.addEventListener('click', () => importFile.click());
+            importBtn.addEventListener('click', showImportModal);
             importFile.addEventListener('change', handleImport);
-            exportBtn.addEventListener('click', handleExport);
+            exportBtn.addEventListener('click', showExportModal);
             syncBtn.addEventListener('click', showGoogleDriveModal);
             logoutBtn.addEventListener('click', handleLogout);
             backBtn.addEventListener('click', goBackToLogin);
@@ -411,6 +605,19 @@
             closeInfo.addEventListener('click', () => infoModal.classList.add('hidden'));
             connectGoogleDrive.addEventListener('click', enableGoogleDriveSync);
             closeGoogleDrive.addEventListener('click', () => googleDriveModal.classList.add('hidden'));
+            exportDevice.addEventListener('click', () => handleExport('device'));
+            exportGoogleDrive.addEventListener('click', () => showDrivePicker('export'));
+            exportBoth.addEventListener('click', () => showDrivePicker('export', true));
+            closeExport.addEventListener('click', () => exportModal.classList.add('hidden'));
+            importDevice.addEventListener('click', () => importFile.click());
+            importGoogleDriveBtn.addEventListener('click', () => showDrivePicker('import'));
+            closeImport.addEventListener('click', () => importModal.classList.add('hidden'));
+            driveBack.addEventListener('click', navigateDriveUp);
+            createFolder.addEventListener('click', showCreateFolderModal);
+            cancelPicker.addEventListener('click', () => drivePickerModal.classList.add('hidden'));
+            confirmPicker.addEventListener('click', confirmDriveSelection);
+            cancelCreateFolder.addEventListener('click', () => createFolderModal.classList.add('hidden'));
+            confirmCreateFolder.addEventListener('click', createNewFolder);
             
             countryDropdownButton.addEventListener('click', () => {
                 countryDropdown.classList.toggle('hidden');
@@ -432,7 +639,233 @@
                 if (!countryDropdownButton.contains(e.target) && !countryDropdown.contains(e.target)) {
                     countryDropdown.classList.add('hidden');
                 }
+                if (!exportModal.contains(e.target) && e.target !== exportBtn) {
+                    exportModal.classList.add('hidden');
+                }
+                if (!importModal.contains(e.target) && e.target !== importBtn) {
+                    importModal.classList.add('hidden');
+                }
             });
+        }
+
+        // Show Google Drive file picker
+        function showDrivePicker(mode, alsoDownload = false) {
+            pickerMode = mode;
+            currentDrivePath = ['root'];
+            selectedDriveItem = null;
+            
+            if (mode === 'export') {
+                pickerTitle.textContent = 'Select Google Drive Folder for Export';
+                confirmPicker.textContent = 'Export Here';
+            } else {
+                pickerTitle.textContent = 'Select Password File to Import';
+                confirmPicker.textContent = 'Import';
+            }
+            
+            loadDriveContents();
+            drivePickerModal.classList.remove('hidden');
+            exportModal.classList.add('hidden');
+            importModal.classList.add('hidden');
+        }
+
+        // Load contents of current drive path
+        function loadDriveContents() {
+            // Get current folder based on path
+            let currentFolder = mockGoogleDrive;
+            for (const part of currentDrivePath) {
+                if (part === 'root') continue;
+                currentFolder = currentFolder.children[part];
+            }
+            
+            // Update UI
+            currentPath.textContent = currentDrivePath.length === 1 ? 'My Drive' : 
+                currentDrivePath.slice(1).join(' > ');
+            
+            driveBack.classList.toggle('hidden', currentDrivePath.length <= 1);
+            
+            // Clear and populate contents
+            driveContents.innerHTML = '';
+            
+            if (Object.keys(currentFolder.children).length === 0) {
+                driveContents.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-folder-open text-3xl mb-2"></i>
+                        <p>This folder is empty</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Add folders first
+            for (const [name, item] of Object.entries(currentFolder.children)) {
+                if (item.type === 'folder') {
+                    const div = document.createElement('div');
+                    div.className = 'drive-item flex items-center justify-between';
+                    div.dataset.name = name;
+                    div.dataset.type = 'folder';
+                    div.innerHTML = `
+                        <div class="flex items-center">
+                            <i class="fas fa-folder text-yellow-400 mr-2"></i>
+                            <span>${item.name}</span>
+                        </div>
+                        <div class="text-sm text-gray-500">${item.modified || '--'}</div>
+                    `;
+                    div.addEventListener('click', () => {
+                        selectDriveItem(div, item);
+                        if (pickerMode === 'import') return; // For import, don't navigate into folders
+                        navigateDriveInto(name);
+                    });
+                    driveContents.appendChild(div);
+                }
+            }
+            
+            // Add files
+            for (const [name, item] of Object.entries(currentFolder.children)) {
+                if (item.type === 'file') {
+                    // For import mode, only show ZIP files
+                    if (pickerMode === 'import' && !name.endsWith('.zip')) continue;
+                    
+                    const div = document.createElement('div');
+                    div.className = 'drive-item flex items-center justify-between';
+                    div.dataset.name = name;
+                    div.dataset.type = 'file';
+                    div.innerHTML = `
+                        <div class="flex items-center">
+                            <i class="fas fa-file-archive text-purple-500 mr-2"></i>
+                            <span>${item.name}</span>
+                        </div>
+                        <div class="text-sm text-gray-500">${item.modified || '--'}</div>
+                    `;
+                    div.addEventListener('click', () => selectDriveItem(div, item));
+                    driveContents.appendChild(div);
+                }
+            }
+            
+            // Update selected item info
+            updateSelectedItemInfo();
+        }
+
+        // Select a drive item
+        function selectDriveItem(element, item) {
+            // Deselect all items
+            document.querySelectorAll('.drive-item').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            // Select clicked item
+            element.classList.add('selected');
+            selectedDriveItem = item;
+            
+            // Update selected item info
+            updateSelectedItemInfo();
+        }
+
+        // Update selected item info text
+        function updateSelectedItemInfo() {
+            if (!selectedDriveItem) {
+                selectedItemInfo.textContent = 'No item selected';
+                confirmPicker.disabled = true;
+                return;
+            }
+            
+            if (pickerMode === 'export') {
+                if (selectedDriveItem.type === 'folder') {
+                    selectedItemInfo.textContent = `Folder: ${selectedDriveItem.name}`;
+                    confirmPicker.disabled = false;
+                } else {
+                    selectedItemInfo.textContent = `File: ${selectedDriveItem.name} (Select a folder for export)`;
+                    confirmPicker.disabled = true;
+                }
+            } else {
+                if (selectedDriveItem.type === 'file' && selectedDriveItem.name.endsWith('.zip')) {
+                    selectedItemInfo.textContent = `File: ${selectedDriveItem.name} (${selectedDriveItem.size})`;
+                    confirmPicker.disabled = false;
+                } else {
+                    selectedItemInfo.textContent = 'Please select a ZIP file to import';
+                    confirmPicker.disabled = true;
+                }
+            }
+        }
+
+        // Navigate into a folder
+        function navigateDriveInto(folderName) {
+            currentDrivePath.push(folderName);
+            loadDriveContents();
+        }
+
+        // Navigate up in drive hierarchy
+        function navigateDriveUp() {
+            if (currentDrivePath.length > 1) {
+                currentDrivePath.pop();
+                loadDriveContents();
+            }
+        }
+
+        // Confirm drive selection based on mode
+        function confirmDriveSelection() {
+            if (!selectedDriveItem) return;
+            
+            if (pickerMode === 'export') {
+                // For export, we expect a folder to be selected
+                if (selectedDriveItem.type === 'folder') {
+                    drivePickerModal.classList.add('hidden');
+                    showProgressModal('Exporting to Google Drive', `Saving to ${selectedDriveItem.name}...`);
+                    simulateProgress(() => {
+                        showToast(`Exported to Google Drive: ${selectedDriveItem.name}`);
+                    });
+                }
+            } else {
+                // For import, we expect a file to be selected
+                if (selectedDriveItem.type === 'file' && selectedDriveItem.name.endsWith('.zip')) {
+                    drivePickerModal.classList.add('hidden');
+                    showProgressModal('Importing from Google Drive', `Loading ${selectedDriveItem.name}...`);
+                    simulateProgress(() => {
+                        // Simulate successful import
+                        showToast(`Imported from Google Drive: ${selectedDriveItem.name}`);
+                    });
+                }
+            }
+        }
+
+        // Show create folder modal
+        function showCreateFolderModal() {
+            newFolderName.value = '';
+            createFolderModal.classList.remove('hidden');
+        }
+
+        // Create new folder in current drive location
+        function createNewFolder() {
+            const folderName = newFolderName.value.trim();
+            if (!folderName) return;
+            
+            // Get current folder
+            let currentFolder = mockGoogleDrive;
+            for (const part of currentDrivePath) {
+                if (part === 'root') continue;
+                currentFolder = currentFolder.children[part];
+            }
+            
+            // Add new folder to structure
+            currentFolder.children[folderName] = {
+                name: folderName,
+                type: 'folder',
+                children: {},
+                modified: new Date().toISOString().split('T')[0]
+            };
+            
+            createFolderModal.classList.add('hidden');
+            loadDriveContents();
+            showToast(`Folder "${folderName}" created`);
+        }
+
+        // Show export modal
+        function showExportModal() {
+            exportModal.classList.remove('hidden');
+        }
+
+        // Show import modal
+        function showImportModal() {
+            importModal.classList.remove('hidden');
         }
 
         // Toggle password visibility
@@ -521,7 +954,7 @@
                 return;
             }
             
-            savedPasswords.forEach((item, idx) => {
+            savedPasswords.forEach((item, idx) {
                 const div = document.createElement('div');
                 div.className = 'password-item border p-3 rounded bg-gray-50';
                 div.innerHTML = `
@@ -760,7 +1193,7 @@
         }
 
         // Handle export - always to ZIP format with JSON and TXT
-        function handleExport() {
+        function handleExport(mode) {
             if (savedPasswords.length === 0) {
                 showToast('No passwords to export', 'error');
                 return;
@@ -781,12 +1214,15 @@
             // Generate ZIP file
             zip.generateAsync({ type: "blob" })
             .then(function(content) {
-                saveAs(content, "password_backup.zip");
-                showToast('Passwords exported to ZIP file successfully');
+                if (mode === 'device') {
+                    saveAs(content, "password_backup.zip");
+                    exportModal.classList.add('hidden');
+                    showToast('Passwords exported to device successfully');
+                }
             });
         }
 
-        // Handle import
+        // Handle import from device
         function handleImport(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -815,6 +1251,7 @@
                     savedPasswords = [...savedPasswords, ...importedData];
                     localStorage.setItem(`data_${currentUser}`, JSON.stringify(savedPasswords));
                     renderPasswords();
+                    importModal.classList.add('hidden');
                     showToast('Import completed successfully');
                     
                     // Sync to Google Drive if enabled
@@ -827,6 +1264,38 @@
                 }
             };
             reader.readAsText(file);
+        }
+
+        // Show progress modal
+        function showProgressModal(title, description) {
+            progressTitle.textContent = title;
+            progressDescription.textContent = description;
+            syncProgressModal.classList.remove('hidden');
+            syncProgress.style.width = '0%';
+            syncStatus.textContent = 'Initializing...';
+        }
+
+        // Simulate progress for async operations
+        function simulateProgress(callback) {
+            setTimeout(() => {
+                syncProgress.style.width = '30%';
+                syncStatus.textContent = 'Connecting to Google Drive...';
+            }, 500);
+            
+            setTimeout(() => {
+                syncProgress.style.width = '60%';
+                syncStatus.textContent = 'Processing data...';
+            }, 1500);
+            
+            setTimeout(() => {
+                syncProgress.style.width = '100%';
+                syncStatus.textContent = 'Completed successfully!';
+            }, 2500);
+            
+            setTimeout(() => {
+                syncProgressModal.classList.add('hidden');
+                if (callback) callback();
+            }, 3000);
         }
 
         // Show Google Drive sync modal
@@ -854,30 +1323,10 @@
 
         // Sync to Google Drive (simulated)
         function syncToGoogleDrive() {
-            syncProgressModal.classList.remove('hidden');
-            syncProgress.style.width = '0%';
-            syncStatus.textContent = 'Encrypting data...';
-            
-            // Simulate encryption and upload process
-            setTimeout(() => {
-                syncProgress.style.width = '30%';
-                syncStatus.textContent = 'Connecting to Google Drive...';
-            }, 500);
-            
-            setTimeout(() => {
-                syncProgress.style.width = '60%';
-                syncStatus.textContent = 'Uploading encrypted data...';
-            }, 1500);
-            
-            setTimeout(() => {
-                syncProgress.style.width = '100%';
-                syncStatus.textContent = 'Sync completed successfully!';
-            }, 2500);
-            
-            setTimeout(() => {
-                syncProgressModal.classList.add('hidden');
+            showProgressModal('Syncing with Google Drive', 'Uploading your encrypted password data to Google Drive...');
+            simulateProgress(() => {
                 showToast('Data synced successfully to Google Drive');
-            }, 3000);
+            });
         }
 
         // Handle logout
