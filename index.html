@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .fade-in {
@@ -137,6 +138,88 @@
         .show {
             display: block;
         }
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: black;
+        }
+        .drive-browser {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .drive-breadcrumb {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .breadcrumb-item {
+            cursor: pointer;
+            color: #3b82f6;
+            margin-right: 5px;
+        }
+        .breadcrumb-item:hover {
+            text-decoration: underline;
+        }
+        .breadcrumb-separator {
+            margin-right: 5px;
+        }
+        .export-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .export-option {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .export-option:hover {
+            background-color: #f9fafb;
+        }
+        .export-option.selected {
+            background-color: #e0e7ff;
+            border-color: #3b82f6;
+        }
+        .export-option i {
+            margin-right: 10px;
+            font-size: 20px;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
@@ -256,7 +339,7 @@
                 
                 <div class="grid grid-cols-2 gap-3 mt-6">
                     <button id="exportBtn" class="bg-purple-600 hover:bg-purple-700 text-white p-2 rounded transition">
-                        <i class="fas fa-file-export mr-2"></i>Export ZIP
+                        <i class="fas fa-file-export mr-2"></i>Export
                     </button>
                     <button id="importBtn" class="bg-yellow-500 hover:bg-yellow-600 text-black p-2 rounded transition">
                         <i class="fas fa-file-import mr-2"></i>Import
@@ -283,6 +366,84 @@
     <div id="toast-container" class="fixed bottom-4 right-4 space-y-2 z-50"></div>
 
     <input type="file" id="importFile" accept=".zip,.json" class="hidden" />
+
+    <!-- Export Modal -->
+    <div id="exportModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeExportModal">&times;</span>
+            <h2 class="text-xl font-semibold mb-4">Export Passwords</h2>
+            <div class="export-options">
+                <div class="export-option" data-option="device">
+                    <i class="fas fa-download text-blue-500"></i>
+                    <div>
+                        <h3 class="font-medium">Export to Device</h3>
+                        <p class="text-sm text-gray-600">Download a ZIP file to your device</p>
+                    </div>
+                </div>
+                <div class="export-option" data-option="drive">
+                    <i class="fab fa-google-drive text-green-500"></i>
+                    <div>
+                        <h3 class="font-medium">Export to Google Drive</h3>
+                        <p class="text-sm text-gray-600">Save a ZIP file directly to your Google Drive</p>
+                    </div>
+                </div>
+            </div>
+            <button id="confirmExport" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded mt-4 transition">
+                Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="importModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeImportModal">&times;</span>
+            <h2 class="text-xl font-semibold mb-4">Import Passwords</h2>
+            <div class="export-options">
+                <div class="export-option" data-option="device">
+                    <i class="fas fa-upload text-blue-500"></i>
+                    <div>
+                        <h3 class="font-medium">Import from Device</h3>
+                        <p class="text-sm text-gray-600">Upload a ZIP or JSON file from your device</p>
+                    </div>
+                </div>
+                <div class="export-option" data-option="drive">
+                    <i class="fab fa-google-drive text-green-500"></i>
+                    <div>
+                        <h3 class="font-medium">Import from Google Drive</h3>
+                        <p class="text-sm text-gray-600">Select a file from your Google Drive</p>
+                    </div>
+                </div>
+            </div>
+            <button id="confirmImport" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded mt-4 transition">
+                Import
+            </button>
+        </div>
+    </div>
+
+    <!-- Google Drive Browser Modal -->
+    <div id="driveBrowserModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeDriveBrowser">&times;</span>
+            <h2 class="text-xl font-semibold mb-4">Select Google Drive Location</h2>
+            <div class="drive-breadcrumb" id="driveBreadcrumb">
+                <span class="breadcrumb-item" data-id="root">My Drive</span>
+            </div>
+            <div class="drive-browser" id="driveBrowser">
+                <div class="text-center py-4 text-gray-500">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading folders...</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <label for="fileName" class="block mb-2 font-medium">File Name</label>
+                <input type="text" id="fileName" placeholder="Enter file name" class="w-full p-2 border rounded" value="password_backup.zip" />
+            </div>
+            <button id="confirmDriveAction" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded mt-4 transition">
+                Confirm
+            </button>
+        </div>
+    </div>
 
     <script>
         // Country codes with flags and phone number lengths
@@ -357,18 +518,55 @@
         const savedList = document.getElementById('savedList');
         const loginSection = document.getElementById('login-section');
 
+        // Modal elements
+        const exportModal = document.getElementById('exportModal');
+        const importModal = document.getElementById('importModal');
+        const driveBrowserModal = document.getElementById('driveBrowserModal');
+        const closeExportModal = document.getElementById('closeExportModal');
+        const closeImportModal = document.getElementById('closeImportModal');
+        const closeDriveBrowser = document.getElementById('closeDriveBrowser');
+        const confirmExport = document.getElementById('confirmExport');
+        const confirmImport = document.getElementById('confirmImport');
+        const confirmDriveAction = document.getElementById('confirmDriveAction');
+        const driveBrowser = document.getElementById('driveBrowser');
+        const driveBreadcrumb = document.getElementById('driveBreadcrumb');
+        const fileName = document.getElementById('fileName');
+
         // Application State
         let savedPasswords = [];
         let currentUser = null;
         let currentCountry = countryCodes[0];
         let googleDriveSyncEnabled = false;
+        let selectedExportOption = null;
+        let selectedImportOption = null;
+        let currentDriveAction = null; // 'export' or 'import'
+        let currentDriveFolder = 'root';
+        let gapiInitialized = false;
 
         // Initialize the application
         function initApp() {
             populateCountryDropdown();
             loadUserData();
             setupEventListeners();
+            initGoogleAPI();
             showToast('Application loaded successfully!', 'success');
+        }
+
+        // Initialize Google API
+        function initGoogleAPI() {
+            gapi.load('client:auth2', () => {
+                gapi.client.init({
+                    apiKey: 'AIzaSyDvVQpN5a3Z4J4J4J4J4J4J4J4J4J4J4J4', // Replace with your API key
+                    clientId: 'YOUR_CLIENT_ID.apps.googleusercontent.com', // Replace with your client ID
+                    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+                    scope: 'https://www.googleapis.com/auth/drive.file'
+                }).then(() => {
+                    gapiInitialized = true;
+                    console.log('Google API initialized');
+                }).catch(error => {
+                    console.error('Error initializing Google API:', error);
+                });
+            });
         }
 
         // Populate country dropdown with search functionality
@@ -478,9 +676,9 @@
             forgotBtn.addEventListener('click', handleForgotPassword);
             addPasswordBtn.addEventListener('click', handleAddPassword);
             generatePassword.addEventListener('click', generateRandomPassword);
-            importBtn.addEventListener('click', () => importFile.click());
+            importBtn.addEventListener('click', showImportModal);
             importFile.addEventListener('change', handleImport);
-            exportBtn.addEventListener('click', handleExport);
+            exportBtn.addEventListener('click', showExportModal);
             syncBtn.addEventListener('click', handleCloudSync);
             logoutBtn.addEventListener('click', handleLogout);
             backBtn.addEventListener('click', goBackToLogin);
@@ -495,6 +693,245 @@
             });
             
             mobileInput.addEventListener('input', validateMobileNumber);
+            
+            // Modal event listeners
+            closeExportModal.addEventListener('click', () => exportModal.style.display = 'none');
+            closeImportModal.addEventListener('click', () => importModal.style.display = 'none');
+            closeDriveBrowser.addEventListener('click', () => driveBrowserModal.style.display = 'none');
+            
+            // Export option selection
+            document.querySelectorAll('.export-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    document.querySelectorAll('.export-option').forEach(opt => opt.classList.remove('selected'));
+                    this.classList.add('selected');
+                    
+                    if (this.closest('#exportModal')) {
+                        selectedExportOption = this.dataset.option;
+                    } else {
+                        selectedImportOption = this.dataset.option;
+                    }
+                });
+            });
+            
+            confirmExport.addEventListener('click', handleExport);
+            confirmImport.addEventListener('click', handleImportSelection);
+            confirmDriveAction.addEventListener('click', handleDriveAction);
+            
+            // Close modals when clicking outside
+            window.addEventListener('click', (e) => {
+                if (e.target === exportModal) exportModal.style.display = 'none';
+                if (e.target === importModal) importModal.style.display = 'none';
+                if (e.target === driveBrowserModal) driveBrowserModal.style.display = 'none';
+            });
+        }
+
+        // Show export modal
+        function showExportModal() {
+            selectedExportOption = null;
+            document.querySelectorAll('.export-option').forEach(opt => opt.classList.remove('selected'));
+            exportModal.style.display = 'block';
+        }
+
+        // Show import modal
+        function showImportModal() {
+            selectedImportOption = null;
+            document.querySelectorAll('#importModal .export-option').forEach(opt => opt.classList.remove('selected'));
+            importModal.style.display = 'block';
+        }
+
+        // Handle export based on selection
+        function handleExport() {
+            if (!selectedExportOption) {
+                showToast('Please select an export option', 'error');
+                return;
+            }
+            
+            exportModal.style.display = 'none';
+            
+            if (selectedExportOption === 'device') {
+                exportToDevice();
+            } else if (selectedExportOption === 'drive') {
+                currentDriveAction = 'export';
+                showDriveBrowser();
+            }
+        }
+
+        // Handle import based on selection
+        function handleImportSelection() {
+            if (!selectedImportOption) {
+                showToast('Please select an import option', 'error');
+                return;
+            }
+            
+            importModal.style.display = 'none';
+            
+            if (selectedImportOption === 'device') {
+                importFile.click();
+            } else if (selectedImportOption === 'drive') {
+                currentDriveAction = 'import';
+                showDriveBrowser();
+            }
+        }
+
+        // Show Google Drive browser
+        function showDriveBrowser() {
+            if (!gapiInitialized) {
+                showToast('Google Drive integration not ready yet. Please try again.', 'error');
+                return;
+            }
+            
+            driveBrowserModal.style.display = 'block';
+            browseDriveFolder(currentDriveFolder);
+        }
+
+        // Browse Google Drive folder
+        function browseDriveFolder(folderId = 'root') {
+            driveBrowser.innerHTML = `
+                <div class="text-center py-4 text-gray-500">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading folders...</p>
+                </div>
+            `;
+            
+            gapi.client.drive.files.list({
+                q: `'${folderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+                fields: 'files(id, name)',
+                orderBy: 'name'
+            }).then(response => {
+                const folders = response.result.files;
+                driveBrowser.innerHTML = '';
+                
+                if (folders.length === 0) {
+                    driveBrowser.innerHTML = '<p class="text-center py-4 text-gray-500">No folders found</p>';
+                } else {
+                    folders.forEach(folder => {
+                        const folderElement = document.createElement('div');
+                        folderElement.className = 'drive-item';
+                        folderElement.innerHTML = `
+                            <i class="fas fa-folder text-yellow-400 mr-2"></i>
+                            <span>${folder.name}</span>
+                        `;
+                        folderElement.addEventListener('click', () => {
+                            currentDriveFolder = folder.id;
+                            updateBreadcrumb(folder.id, folder.name);
+                            browseDriveFolder(folder.id);
+                        });
+                        driveBrowser.appendChild(folderElement);
+                    });
+                }
+                
+                // Update breadcrumb
+                if (folderId !== 'root') {
+                    gapi.client.drive.files.get({
+                        fileId: folderId,
+                        fields: 'name, parents'
+                    }).then(fileResponse => {
+                        const file = fileResponse.result;
+                        updateBreadcrumb(folderId, file.name, file.parents);
+                    });
+                } else {
+                    updateBreadcrumb('root', 'My Drive');
+                }
+            }).catch(error => {
+                console.error('Error browsing Drive folder:', error);
+                driveBrowser.innerHTML = '<p class="text-center py-4 text-red-500">Error loading folders</p>';
+            });
+        }
+
+        // Update breadcrumb
+        function updateBreadcrumb(folderId, folderName, parents = null) {
+            driveBreadcrumb.innerHTML = '';
+            
+            // Add root breadcrumb
+            const rootItem = document.createElement('span');
+            rootItem.className = 'breadcrumb-item';
+            rootItem.dataset.id = 'root';
+            rootItem.textContent = 'My Drive';
+            rootItem.addEventListener('click', () => {
+                currentDriveFolder = 'root';
+                browseDriveFolder('root');
+            });
+            driveBreadcrumb.appendChild(rootItem);
+            
+            // If we're not at root, add current folder
+            if (folderId !== 'root') {
+                const separator = document.createElement('span');
+                separator.className = 'breadcrumb-separator';
+                separator.textContent = '›';
+                driveBreadcrumb.appendChild(separator);
+                
+                const currentItem = document.createElement('span');
+                currentItem.className = 'breadcrumb-item';
+                currentItem.dataset.id = folderId;
+                currentItem.textContent = folderName;
+                driveBreadcrumb.appendChild(currentItem);
+            }
+        }
+
+        // Handle drive action (export or import)
+        function handleDriveAction() {
+            if (currentDriveAction === 'export') {
+                exportToDrive();
+            } else if (currentDriveAction === 'import') {
+                importFromDrive();
+            }
+        }
+
+        // Export to Google Drive
+        function exportToDrive() {
+            if (savedPasswords.length === 0) {
+                showToast('No passwords to export', 'error');
+                return;
+            }
+            
+            const zip = new JSZip();
+            
+            // JSON data
+            const jsonData = JSON.stringify(savedPasswords, null, 2);
+            zip.file("passwords.json", jsonData);
+            
+            // TXT data
+            const txtData = savedPasswords.map(p => 
+                `Website: ${p.website}\nUsername: ${p.username}\nPassword: ${p.password}\n${'-'.repeat(30)}`
+            ).join('\n\n');
+            zip.file("passwords.txt", txtData);
+            
+            // Generate ZIP file
+            zip.generateAsync({ type: "blob" })
+            .then(function(content) {
+                const metadata = {
+                    name: fileName.value || 'password_backup.zip',
+                    mimeType: 'application/zip',
+                    parents: [currentDriveFolder]
+                };
+                
+                const formData = new FormData();
+                formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                formData.append('file', content);
+                
+                fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: new Headers({
+                        'Authorization': 'Bearer ' + gapi.auth.getToken().access_token
+                    }),
+                    body: formData
+                }).then(response => response.json())
+                .then(data => {
+                    driveBrowserModal.style.display = 'none';
+                    showToast('Passwords exported to Google Drive successfully');
+                }).catch(error => {
+                    console.error('Error uploading to Drive:', error);
+                    showToast('Failed to export to Google Drive', 'error');
+                });
+            });
+        }
+
+        // Import from Google Drive
+        function importFromDrive() {
+            // For simplicity, we'll just show a message as this would require more complex implementation
+            // to browse and select files from Google Drive
+            showToast('Please select a file from your device for now. Full Google Drive import is complex to implement.', 'error');
+            driveBrowserModal.style.display = 'none';
         }
 
         // Toggle password visibility
@@ -805,8 +1242,8 @@
             showToast('Generated secure password');
         }
 
-        // Handle export - always to ZIP format with JSON and TXT
-        function handleExport() {
+        // Export to device
+        function exportToDevice() {
             if (savedPasswords.length === 0) {
                 showToast('No passwords to export', 'error');
                 return;
