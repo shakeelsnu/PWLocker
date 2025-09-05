@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Offline Password Locker</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+<body class="bg-gray-100 p-4">
+
+<!-- Toast Notification -->
+<div id="toast" class="fixed top-4 right-4 px-4 py-2 rounded shadow-md text-white hidden"></div>
+
+<!-- Login -->
+<div id="login-container" class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
+  <h1 class="text-2xl font-bold mb-4 text-center">Offline Password Locker</h1>
+  <label class="block text-sm font-medium mb-1">Mobile Number (with +country code)</label>
+  <input type="text" id="mobile-number" placeholder="+123456789" class="w-full p-2 border mb-3 rounded" />
+  <div id="set-password-login" class="hidden">
+    <label class="block text-sm font-medium mb-1" id="pw-label">Enter Password (4–6 digits)</label>
+    <input type="password" id="set-password" inputmode="numeric" pattern="\d*" maxlength="6" placeholder="••••" class="w-full p-2 border mb-3 rounded" />
+    <button id="submit-password" class="w-full bg-blue-600 hover:bg-blue-700 p-2 text-white rounded">Continue</button>
+  </div>
+  <button id="next-button" class="w-full bg-blue-600 hover:bg-blue-700 p-2 text-white rounded mt-2">Next</button>
+  <button id="forgot-password" class="w-full bg-yellow-600 hover:bg-yellow-700 p-2 text-white rounded mt-2">Forgot Password</button>
+</div>
+
+<!-- Forgot Password -->
+<div id="forgot-container" class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md hidden">
+  <h2 class="text-xl font-bold mb-4 text-center">Recover Password</h2>
+  <input type="text" id="forgot-mobile" placeholder="Your Mobile (+123...)" class="w-full p-2 border mb-2 rounded" />
+  <input type="email" id="forgot-email" placeholder="Registered Email" class="w-full p-2 border mb-2 rounded" />
+  <button id="submit-forgot" class="w-full bg-blue-600 hover:bg-blue-700 p-2 text-white rounded mt-2">Submit</button>
+  <button id="back-login" class="w-full bg-gray-600 hover:bg-gray-700 p-2 text-white rounded mt-2">Back to Login</button>
+</div>
+
+<!-- Main App -->
+<div id="app-container" class="max-w-4xl mx-auto bg-gray-50 p-6 rounded-lg shadow-md hidden">
+  <div class="flex items-center justify-between">
+    <h2 class="text-xl font-bold mb-2">Logged in as: <span id="user-mobile"></span></h2>
+    <button id="logout" class="bg-red-600 hover:bg-red-700 text-white p-2 rounded">Logout</button>
+  </div>
+  <div class="bg-white p-4 rounded shadow-md mt-3">
+    <h3 class="font-bold mb-2">Add New Credential</h3>
+    <input type="text" id="new-website" placeholder="Website/Service" class="w-full p-2 border mb-2 rounded" />
+    <input type="text" id="new-username" placeholder="Username/Email" class="w-full p-2 border mb-2 rounded" />
+    <input type="text" id="new-password" placeholder="Password" class="w-full p-2 border mb-2 rounded" />
+    <button id="add-password" class="w-full bg-indigo-600 hover:bg-indigo-700 p-2 text-white rounded mb-2">Save Password</button>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
+      <button id="backup-zip" class="bg-gray-700 hover:bg-gray-800 p-2 text-white rounded">Export ALL as ZIP</button>
+      <input type="file" id="import-any" class="col-span-1 md:col-span-2 w-full" accept=".zip" />
+      <button id="import-button" class="bg-green-600 hover:bg-green-700 p-2 text-white rounded">Import (.zip)</button>
+    </div>
+  </div>
+  <h3 class="text-lg font-bold mt-6">Your Saved Passwords</h3>
+  <ul id="password-list" class="space-y-2 mt-2"></ul>
+</div>
+
+<script>
+function getUsers(){return JSON.parse(localStorage.getItem('users')||'{}');}
+function setUsers(users){localStorage.setItem('users',JSON.stringify(users));}
+
+const loginContainer=document.getElementById('login-container');
+const forgotContainer=document.getElementById('forgot-container');
+const appContainer=document.getElementById('app-container');
+
+const toast=document.getElementById('toast');
+function showToast(msg,type="success"){
+  toast.textContent=msg;
+  toast.className=`fixed top-4 right-4 px-4 py-2 rounded shadow-md text-white ${type==="success"?"bg-green-600":"bg-red-600"}`;
+  toast.classList.remove('hidden');
+  setTimeout(()=>toast.classList.add('hidden'),2000);
+}
+
+const nextBtn=document.getElementById('next-button');
+const forgotBtn=document.getElementById('forgot-password');
+const backBtn=document.getElementById('back-login');
+const submitForgot=document.getElementById('submit-forgot');
+const submitPw=document.getElementById('submit-password');
+
+const mobileInput=document.getElementById('mobile-number');
+const setPwInput=document.getElementById('set-password');
+const forgotMobile=document.getElementById('forgot-mobile');
+const forgotEmail=document.getElementById('forgot-email');
+
+let currentUser=null;
+
+function renderPasswords(){
+  const users=getUsers();
+  const list=document.getElementById('password-list');
+  list.innerHTML='';
+  if(currentUser&&users[currentUser]){
+    users[currentUser].data.forEach((item,idx)=>{
+      const li=document.createElement('li');
+      li.className='bg-white p-3 rounded shadow';
+      li.innerHTML=`<div>Website: ${item.website}</div><div>Username: ${item.username}</div><div>Password: ${item.password}</div>`;
+      const delBtn=document.createElement('button');
+      delBtn.textContent='Delete';
+      delBtn.className='mt-2 bg-red-600 hover:bg-red-700 text-white p-1 rounded';
+      delBtn.onclick=()=>{
+        if(confirm('Should I delete this saved password?')){
+          users[currentUser].data.splice(idx,1);
+          setUsers(users);
+          renderPasswords();
+          showToast('Password deleted','success');
+        }
+      };
+      li.appendChild(delBtn);
+      list.appendChild(li);
+    });
+  }
+}
+
+// Next
+nextBtn.onclick=()=>{
+  const mobile=mobileInput.value.trim();
+  if(!mobile){showToast('Enter mobile number','error');return;}
+  const users=getUsers();
+  document.getElementById('set-password-login').classList.remove('hidden');
+  if(users[mobile]){
+    document.getElementById('pw-label').textContent='Enter Password (4–6 digits)';
+  } else {
+    document.getElementById('pw-label').textContent='Create New Password (4–6 digits)';
+  }
+};
+
+// Submit password
+submitPw.onclick=()=>{
+  const mobile=mobileInput.value.trim();
+  if(!mobile){showToast('Enter mobile number first','error');return;}
+  const pw=setPwInput.value.trim();
+  if(!pw){showToast('Enter password','error');return;}
+  if(pw.length<4||pw.length>6){showToast('Password must be 4–6 digits','error');return;}
+  const users=getUsers();
+  if(!users[mobile]){users[mobile]={password:pw,email:'',data:[]};setUsers(users);} 
+  if(users[mobile].password!==pw){showToast('Password not correct','error');return;}
+  loginContainer.classList.add('hidden');
+  appContainer.classList.remove('hidden');
+  document.getElementById('user-mobile').textContent=mobile;
+  currentUser=mobile;
+  renderPasswords();
+  showToast('Login successful','success');
+};
+
+// Add password
+const addBtn=document.getElementById('add-password');
+addBtn.onclick=()=>{
+  if(!currentUser)return;
+  const website=document.getElementById('new-website').value.trim();
+  const username=document.getElementById('new-username').value.trim();
+  const password=document.getElementById('new-password').value.trim();
+  if(!website||!username||!password){showToast('Fill all fields','error');return;}
+  const users=getUsers();
+  users[currentUser].data.push({website,username,password});
+  setUsers(users);
+  renderPasswords();
+  document.getElementById('new-website').value='';
+  document.getElementById('new-username').value='';
+  document.getElementById('new-password').value='';
+  showToast('Password saved','success');
+};
+
+// Export ZIP
+const backupZip=document.getElementById('backup-zip');
+backupZip.onclick=async()=>{
+  if(!currentUser)return;
+  const users=getUsers();
+  const zip=new JSZip();
+  const jsonData=JSON.stringify(users[currentUser].data,null,2);
+  const textData=users[currentUser].data.map(item=>`Website: ${item.website}\nUsername: ${item.username}\nPassword: ${item.password}\n`).join("\n");
+  zip.file("data.json",jsonData);
+  zip.file("data.txt",textData);
+  const content=await zip.generateAsync({type:"blob"});
+  saveAs(content,`backup_${currentUser}.zip`);
+  showToast('Data exported as ZIP','success');
+};
+
+// Import ZIP
+const importBtn=document.getElementById('import-button');
+importBtn.onclick=async()=>{
+  if(!currentUser)return;
+  const file=document.getElementById('import-any').files[0];
+  if(!file){showToast('Choose a file first','error');return;}
+  const users=getUsers();
+  if(file.name.endsWith('.zip')){
+    const zip=await JSZip.loadAsync(file);
+    const jsonFile=zip.file("data.json");
+    if(jsonFile){
+      const text=await jsonFile.async("string");
+      users[currentUser].data=JSON.parse(text);
+      setUsers(users);
+      renderPasswords();
+      showToast('Data imported','success');
+    }
+  }
+};
+
+// Forgot password
+forgotBtn.onclick=()=>{loginContainer.classList.add('hidden');forgotContainer.classList.remove('hidden');};
+backBtn.onclick=()=>{forgotContainer.classList.add('hidden');loginContainer.classList.remove('hidden');};
+submitForgot.onclick=()=>{
+  const mobile=forgotMobile.value.trim();
+  const email=forgotEmail.value.trim();
+  if(!mobile||!email){showToast('Fill all fields','error');return;}
+  const users=getUsers();
+  if(users[mobile]&&users[mobile].email===email){showToast(`Your saved password is: ${users[mobile].password}`,'success');} else {showToast('No match found.','error');}
+};
+
+// Logout
+const logoutBtn=document.getElementById('logout');
+logoutBtn.onclick=()=>{
+  currentUser=null;
+  appContainer.classList.add('hidden');
+  loginContainer.classList.remove('hidden');
+  showToast('Logged out','success');
+};
+</script>
+</body>
+</html>
