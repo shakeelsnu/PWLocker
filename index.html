@@ -10,6 +10,9 @@
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<!-- Intl Tel Input for country code + validation -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/css/intlTelInput.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>
 </head>
 <body class="bg-gray-100 p-4">
 
@@ -19,8 +22,8 @@
 <!-- Login -->
 <div id="login-container" class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
   <h1 class="text-2xl font-bold mb-4 text-center">Password Locker</h1>
-  <label class="block text-sm font-medium mb-1">Mobile Number (with +country code)</label>
-  <input type="text" id="mobile-number" placeholder="+123456789" class="w-full p-2 border mb-3 rounded" />
+  <label class="block text-sm font-medium mb-1">Mobile Number</label>
+  <input type="tel" id="mobile-number" class="w-full p-2 border mb-3 rounded" />
   <div id="set-password-login" class="hidden">
     <label class="block text-sm font-medium mb-1" id="pw-label">Enter Password (4–6 digits)</label>
     <input type="password" id="set-password" inputmode="numeric" pattern="\d*" maxlength="6" placeholder="••••" class="w-full p-2 border mb-3 rounded" />
@@ -86,12 +89,23 @@ googleBtn.onclick=()=>{
       document.getElementById('login-container').classList.add('hidden');
       document.getElementById('app-container').classList.remove('hidden');
       showToast('Google Sign-in successful','success');
+      localStorage.setItem('autoLogin', JSON.stringify({email:user.email, provider:'google'}));
     })
     .catch(err=>{
       showToast('Google Sign-in failed','error');
       console.error(err);
     });
 };
+
+// Auto login if previously saved
+window.addEventListener('DOMContentLoaded',()=>{
+  const saved=JSON.parse(localStorage.getItem('autoLogin')||'null');
+  if(saved&&saved.provider==='google'){
+    document.getElementById('user-mobile').textContent=saved.email;
+    document.getElementById('login-container').classList.add('hidden');
+    document.getElementById('app-container').classList.remove('hidden');
+  }
+});
 
 function getUsers(){return JSON.parse(localStorage.getItem('users')||'{}');}
 function setUsers(users){localStorage.setItem('users',JSON.stringify(users));}
@@ -109,15 +123,11 @@ function showToast(msg,type="success"){
 }
 
 const nextBtn=document.getElementById('next-button');
-const forgotBtn=document.getElementById('forgot-password');
-const backBtn=document.getElementById('back-login');
-const submitForgot=document.getElementById('submit-forgot');
 const submitPw=document.getElementById('submit-password');
-
 const mobileInput=document.getElementById('mobile-number');
-const setPwInput=document.getElementById('set-password');
-const forgotMobile=document.getElementById('forgot-mobile');
-const forgotEmail=document.getElementById('forgot-email');
+
+// IntlTelInput setup
+const iti=intlTelInput(mobileInput,{initialCountry:"auto",utilsScript:"https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/utils.js"});
 
 let currentUser=null;
 
@@ -147,10 +157,10 @@ function renderPasswords(){
   }
 }
 
-// Next
+// Next button with validation
 nextBtn.onclick=()=>{
-  const mobile=mobileInput.value.trim();
-  if(!mobile){showToast('Enter mobile number','error');return;}
+  if(!iti.isValidNumber()){showToast('Invalid mobile number','error');return;}
+  const mobile=iti.getNumber();
   const users=getUsers();
   document.getElementById('set-password-login').classList.remove('hidden');
   if(users[mobile]){
@@ -162,9 +172,9 @@ nextBtn.onclick=()=>{
 
 // Submit password
 submitPw.onclick=()=>{
-  const mobile=mobileInput.value.trim();
-  if(!mobile){showToast('Enter mobile number first','error');return;}
-  const pw=setPwInput.value.trim();
+  if(!iti.isValidNumber()){showToast('Invalid mobile number','error');return;}
+  const mobile=iti.getNumber();
+  const pw=document.getElementById('set-password').value.trim();
   if(!pw){showToast('Enter password','error');return;}
   if(pw.length<4||pw.length>6){showToast('Password must be 4–6 digits','error');return;}
   const users=getUsers();
@@ -174,6 +184,7 @@ submitPw.onclick=()=>{
   appContainer.classList.remove('hidden');
   document.getElementById('user-mobile').textContent=mobile;
   currentUser=mobile;
+  localStorage.setItem('autoLogin', JSON.stringify({mobile,pw,provider:'local'}));
   renderPasswords();
   showToast('Login successful','success');
 };
@@ -231,21 +242,11 @@ importBtn.onclick=async()=>{
   }
 };
 
-// Forgot password
-forgotBtn.onclick=()=>{loginContainer.classList.add('hidden');forgotContainer.classList.remove('hidden');};
-backBtn.onclick=()=>{forgotContainer.classList.add('hidden');loginContainer.classList.remove('hidden');};
-submitForgot.onclick=()=>{
-  const mobile=forgotMobile.value.trim();
-  const email=forgotEmail.value.trim();
-  if(!mobile||!email){showToast('Fill all fields','error');return;}
-  const users=getUsers();
-  if(users[mobile]&&users[mobile].email===email){showToast(`Your saved password is: ${users[mobile].password}`,'success');} else {showToast('No match found.','error');}
-};
-
 // Logout
 const logoutBtn=document.getElementById('logout');
 logoutBtn.onclick=()=>{
   currentUser=null;
+  localStorage.removeItem('autoLogin');
   appContainer.classList.add('hidden');
   loginContainer.classList.remove('hidden');
   showToast('Logged out','success');
